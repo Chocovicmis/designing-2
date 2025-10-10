@@ -58,3 +58,15 @@ Configure the component at runtime:
 
 Feel free to adapt the heuristics in `App.tsx` if you want different layout rules, additional keyword palettes, or a custom
 branding system.
+
+### Publishing your changes to GitHub
+
+This repository does not ship with a Git remote. After committing locally you will need to add your own GitHub repository and
+push to it for the changes to appear online:
+
+```bash
+git remote add origin https://github.com/<your-account>/<your-repo>.git
+git push -u origin work
+```
+
+Replace `work` with the branch name you want to publish. Subsequent pushes can use just `git push`.
