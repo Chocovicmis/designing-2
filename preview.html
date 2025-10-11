@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wedding Card Generator Preview</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <style>
+      body { background: #e2e8f0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" class="min-h-screen"></div>
+    <script type="module">
+      import React from "https://esm.sh/react@18.3.1";
+      import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
+
+      const root = document.getElementById("root");
+      const renderError = (title, detail, err) => {
+        console.error(title, err || detail);
+        root.innerHTML = `
+          <div class="max-w-xl mx-auto mt-16 bg-white rounded-xl shadow-lg p-6 text-center space-y-3">
+            <h2 class="text-xl font-semibold text-rose-600">${title}</h2>
+            <p class="text-sm text-slate-700 whitespace-pre-wrap">${detail}</p>
+            <p class="text-xs text-slate-500">Run <code>npm run preview:cdn</code> so the helper server can serve TypeScript and relay OpenAI calls.</p>
+          </div>
+        `;
+      };
+
+      const bootstrap = async () => {
+        try {
+          await new Promise((resolve, reject) => {
+            if (window.Babel?.transform) return resolve();
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/@babel/standalone@7.25.6/babel.min.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Failed to load Babel"));
+            document.head.appendChild(script);
+          });
+
+          let res;
+          try {
+            res = await fetch("./src/App.tsx", { cache: "no-store" });
+          } catch (networkErr) {
+            throw new Error(
+              "Unable to load src/App.tsx. Serve the repository root (npm run preview:cdn) instead of opening the file directly."
+            );
+          }
+          if (!res.ok) {
+            throw new Error(
+              `Fetching src/App.tsx failed with HTTP ${res.status}. Ensure you're serving the repository root (npm run preview:cdn).`
+            );
+          }
+
+          let source = await res.text();
+          source = source.replace(/import\s+React[^;]+;?\s*/gi, "");
+          source = source.replace(/import\s+\{[^}]+\}\s+from\s+['\"]react['\"];?\s*/gi, "");
+          const hookPrelude = "const { useCallback, useEffect, useMemo, useState } = React;\n";
+          if (!source.startsWith(hookPrelude)) {
+            source = hookPrelude + source;
+          }
+          source = source.replace(/export\s+default\s+function\s+App/, "function App");
+          source = source.replace(/export\s+default\s+App;?/, "");
+          source += "\nwindow.__WCG_APP__ = App;\n";
+
+          const { code } = window.Babel.transform(source, {
+            filename: "App.tsx",
+            presets: ["typescript", "react"],
+            sourceType: "module",
+          });
+
+          const wrapped = new Function("React", "ReactDOM", "window", code);
+          wrapped(React, ReactDOM, window);
+          const App = window.__WCG_APP__;
+          ReactDOM.createRoot(root).render(React.createElement(App));
+        } catch (err) {
+          renderError(
+            "Preview failed to boot",
+            err instanceof Error ? err.message : String(err),
+            err
+          );
+        }
+      };
+
+      bootstrap();
+    </script>
+  </body>
+</html>
