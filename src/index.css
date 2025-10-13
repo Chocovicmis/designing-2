@@ -90,8 +90,15 @@ main {
 
 .card-creator {
   padding: 3rem 2rem;
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
+}
+
+.creator-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
 }
 
 .creator-container {
@@ -105,11 +112,9 @@ main {
   font-size: 2.5rem;
   color: #667eea;
   margin-bottom: 0.5rem;
-  text-align: center;
 }
 
 .subtitle {
-  text-align: center;
   color: #666;
   margin-bottom: 2rem;
 }
@@ -224,6 +229,55 @@ textarea:focus {
 
 .info-box li {
   margin-bottom: 0.25rem;
+}
+
+.preview-container {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 120px;
+}
+
+.preview-container h3 {
+  color: #667eea;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.preview-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow: hidden;
+}
+
+.preview-text {
+  color: #333;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.preview-note {
+  color: #999;
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
 }
 
 .error-message {
@@ -692,6 +746,16 @@ textarea:focus {
   .properties-panel {
     width: 100%;
     max-height: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .creator-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-container {
+    position: static;
   }
 }
 
