@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase, TextElement } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { generateBackground, analyzeTextPlacement } from '../lib/openai';
 
 interface CardEditorProps {
   dimension: 'square' | 'landscape' | 'portrait';
@@ -20,11 +21,13 @@ export default function CardEditor({
   onBack
 }: CardEditorProps) {
   const { user } = useAuth();
+  const [currentBackgroundUrl, setCurrentBackgroundUrl] = useState(backgroundImageUrl);
   const [textElements, setTextElements] = useState<TextElement[]>(initialTextElements);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [saving, setSaving] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const dimensionSpecs = {
@@ -95,6 +98,51 @@ export default function CardEditor({
     setSelectedElement(newElement.id);
   };
 
+  const handleRegenerateBackground = async () => {
+    if (!confirm('Regenerate background? This will create a new design with the same prompt. Your text elements will remain unchanged.')) {
+      return;
+    }
+
+    setRegenerating(true);
+    try {
+      const newImageUrl = await generateBackground(backgroundPrompt);
+      setCurrentBackgroundUrl(newImageUrl);
+    } catch (err) {
+      console.error('Regenerate error:', err);
+      alert('Failed to regenerate background. Please try again.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleReanalyzeText = async () => {
+    if (!confirm('Re-analyze text placement? This will reset all text elements based on AI analysis.')) {
+      return;
+    }
+
+    setRegenerating(true);
+    try {
+      const analysis = await analyzeTextPlacement(
+        invitationText,
+        dimension,
+        backgroundPrompt
+      );
+
+      const elementsWithIds = analysis.elements.map((el, idx) => ({
+        ...el,
+        id: `text-${idx}-${Date.now()}`
+      }));
+
+      setTextElements(elementsWithIds);
+      setSelectedElement(null);
+    } catch (err) {
+      console.error('Re-analyze error:', err);
+      alert('Failed to re-analyze text placement. Please try again.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   const captureCardImage = async (): Promise<string> => {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -107,7 +155,7 @@ export default function CardEditor({
     await new Promise((resolve, reject) => {
       img.onload = resolve;
       img.onerror = reject;
-      img.src = backgroundImageUrl;
+      img.src = currentBackgroundUrl;
     });
 
     ctx.drawImage(img, 0, 0, width, height);
@@ -143,7 +191,7 @@ export default function CardEditor({
         title: 'My Invitation Card',
         dimension,
         background_prompt: backgroundPrompt,
-        background_image_url: backgroundImageUrl,
+        background_image_url: currentBackgroundUrl,
         invitation_text: invitationText,
         text_elements: textElements,
         card_data_url: cardDataUrl,
@@ -182,6 +230,20 @@ export default function CardEditor({
         <button className="back-btn" onClick={onBack}>← Back</button>
         <h2>Edit Your Card</h2>
         <div className="header-actions">
+          <button
+            className="regenerate-btn"
+            onClick={handleRegenerateBackground}
+            disabled={regenerating}
+          >
+            {regenerating ? 'Regenerating...' : '🔄 Regenerate Background'}
+          </button>
+          <button
+            className="reanalyze-btn"
+            onClick={handleReanalyzeText}
+            disabled={regenerating}
+          >
+            {regenerating ? 'Analyzing...' : '✨ Re-analyze Text'}
+          </button>
           {user && (
             <button className="save-btn" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save to Gallery'}
@@ -201,7 +263,7 @@ export default function CardEditor({
             style={{
               width: `${width}px`,
               height: `${height}px`,
-              backgroundImage: `url(${backgroundImageUrl})`,
+              backgroundImage: `url(${currentBackgroundUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
