@@ -101,16 +101,32 @@ export default function CardEditor({
     canvas.height = height;
     const ctx = canvas.getContext('2d')!;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
 
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = backgroundImageUrl;
-    });
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Image load timeout'));
+        }, 10000);
 
-    ctx.drawImage(img, 0, 0, width, height);
+        img.onload = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('Failed to load background image'));
+        };
+        img.src = backgroundImageUrl;
+      });
+
+      ctx.drawImage(img, 0, 0, width, height);
+    } catch (error) {
+      console.warn('Could not load background image, using solid color:', error);
+      ctx.fillStyle = '#f5f7fa';
+      ctx.fillRect(0, 0, width, height);
+    }
 
     textElements.forEach(el => {
       ctx.font = `${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
@@ -136,7 +152,12 @@ export default function CardEditor({
 
     setSaving(true);
     try {
-      const cardDataUrl = await captureCardImage();
+      let cardDataUrl = '';
+      try {
+        cardDataUrl = await captureCardImage();
+      } catch (captureErr) {
+        console.warn('Could not capture image preview:', captureErr);
+      }
 
       const { error } = await supabase.from('invitation_cards').insert({
         user_id: user.id,
@@ -146,16 +167,20 @@ export default function CardEditor({
         background_image_url: backgroundImageUrl,
         invitation_text: invitationText,
         text_elements: textElements,
-        card_data_url: cardDataUrl,
+        card_data_url: cardDataUrl || null,
         is_public: false
-      });
+      }).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error(error.message || 'Failed to save to database');
+      }
 
       alert('Card saved successfully!');
     } catch (err) {
       console.error('Save error:', err);
-      alert('Failed to save card');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save card';
+      alert(errorMessage);
     } finally {
       setSaving(false);
     }
