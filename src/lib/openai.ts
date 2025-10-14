@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { supabase } from './supabase';
 
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -11,6 +12,27 @@ export const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+async function uploadImageToSupabase(imageUrl: string): Promise<string> {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+
+  const fileName = `background-${Date.now()}.png`;
+  const { data, error } = await supabase.storage
+    .from('card-backgrounds')
+    .upload(fileName, blob, {
+      contentType: 'image/png',
+      cacheControl: '3600',
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('card-backgrounds')
+    .getPublicUrl(data.path);
+
+  return publicUrl;
+}
+
 export async function generateBackground(prompt: string): Promise<string> {
   const response = await openai.images.generate({
     model: "dall-e-3",
@@ -20,7 +42,16 @@ export async function generateBackground(prompt: string): Promise<string> {
     quality: "standard",
   });
 
-  return response.data?.[0]?.url || '';
+  const dalleUrl = response.data?.[0]?.url || '';
+  if (!dalleUrl) throw new Error('Failed to generate image');
+
+  try {
+    const supabaseUrl = await uploadImageToSupabase(dalleUrl);
+    return supabaseUrl;
+  } catch (error) {
+    console.warn('Failed to upload to Supabase, using DALL-E URL:', error);
+    return dalleUrl;
+  }
 }
 
 export async function analyzeTextPlacement(
