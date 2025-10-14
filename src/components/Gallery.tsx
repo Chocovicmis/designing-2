@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, InvitationCard } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import CardPreview from './CardPreview';
 
 export default function Gallery() {
   const { user } = useAuth();
@@ -52,13 +53,53 @@ export default function Gallery() {
     }
   };
 
-  const downloadCard = (card: InvitationCard) => {
-    if (!card.card_data_url) return;
+  const downloadCard = async (card: InvitationCard) => {
+    try {
+      const canvas = document.createElement('canvas');
+      const dimensionSpecs: Record<string, { width: number; height: number }> = {
+        square: { width: 800, height: 800 },
+        landscape: { width: 1000, height: 600 },
+        portrait: { width: 600, height: 1000 }
+      };
 
-    const link = document.createElement('a');
-    link.download = `${card.title}.png`;
-    link.href = card.card_data_url;
-    link.click();
+      const { width, height } = dimensionSpecs[card.dimension];
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = card.background_image_url;
+      });
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      card.text_elements.forEach((el: any) => {
+        ctx.font = `${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
+        ctx.fillStyle = el.color;
+        ctx.textAlign = el.textAlign;
+
+        const lines = el.content.split('\n');
+        lines.forEach((line: string, idx: number) => {
+          const xPos = el.textAlign === 'center' ? el.x + el.width / 2 :
+                       el.textAlign === 'right' ? el.x + el.width : el.x;
+          ctx.fillText(line, xPos, el.y + (idx * el.fontSize * 1.2));
+        });
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `${card.title}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download card. Please try again.');
+    }
   };
 
   if (!user) {
@@ -109,11 +150,13 @@ export default function Gallery() {
           {cards.map(card => (
             <div key={card.id} className="card-item">
               <div className="card-preview">
-                {card.card_data_url ? (
-                  <img src={card.card_data_url} alt={card.title} />
-                ) : (
-                  <div className="no-preview">No preview available</div>
-                )}
+                <CardPreview
+                  backgroundImageUrl={card.background_image_url}
+                  textElements={card.text_elements}
+                  dimension={card.dimension}
+                  width={300}
+                  height={card.dimension === 'square' ? 300 : card.dimension === 'landscape' ? 300 : 500}
+                />
               </div>
               <div className="card-info">
                 <h3>{card.title}</h3>
