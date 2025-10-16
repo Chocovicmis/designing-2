@@ -67,21 +67,20 @@ export default function Gallery() {
       canvas.height = height;
       const ctx = canvas.getContext('2d')!;
 
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+      const response = await fetch(card.background_image_url);
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
 
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = card.background_image_url;
-      });
-
-      ctx.drawImage(img, 0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, width, height);
 
       card.text_elements.forEach((el: any) => {
         ctx.font = `${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
         ctx.fillStyle = el.color;
         ctx.textAlign = el.textAlign;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
 
         const lines = el.content.split('\n');
         lines.forEach((line: string, idx: number) => {
@@ -91,11 +90,18 @@ export default function Gallery() {
         });
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `${card.title}.png`;
-      link.href = dataUrl;
-      link.click();
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to create image');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `${card.title}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
     } catch (err) {
       console.error('Download error:', err);
       alert('Failed to download card. Please try again.');
