@@ -13,6 +13,11 @@ export const openai = new OpenAI({
 });
 
 async function uploadImageToSupabase(imageUrl: string): Promise<string> {
+  if (!supabase) {
+    console.warn('Supabase not configured. Skipping background upload.');
+    return imageUrl;
+  }
+
   const response = await fetch(imageUrl);
   const blob = await response.blob();
 
