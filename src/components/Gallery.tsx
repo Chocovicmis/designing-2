@@ -4,15 +4,21 @@ import { useAuth } from '../contexts/AuthContext';
 import CardPreview from './CardPreview';
 
 export default function Gallery() {
-  const { user } = useAuth();
+  const { user, isSupabaseConfigured } = useAuth();
   const [cards, setCards] = useState<InvitationCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCards();
-  }, [user]);
+  }, [user, isSupabaseConfigured]);
 
   const loadCards = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setCards([]);
+      setLoading(false);
+      return;
+    }
+
     if (!user) {
       setCards([]);
       setLoading(false);
@@ -37,6 +43,11 @@ export default function Gallery() {
   };
 
   const deleteCard = async (id: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      alert('Supabase is not configured. Delete is unavailable.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this card?')) return;
 
     try {
@@ -107,6 +118,20 @@ export default function Gallery() {
       alert('Failed to download card. Please try again.');
     }
   };
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="gallery">
+        <div className="gallery-container">
+          <h1>Gallery</h1>
+          <div className="empty-state">
+            <p>Gallery is unavailable because Supabase is not configured.</p>
+            <p>Please provide Supabase credentials to enable this feature.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

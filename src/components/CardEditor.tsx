@@ -19,7 +19,7 @@ export default function CardEditor({
   initialTextElements,
   onBack
 }: CardEditorProps) {
-  const { user } = useAuth();
+  const { user, isSupabaseConfigured } = useAuth();
   const [textElements, setTextElements] = useState<TextElement[]>(initialTextElements);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -145,6 +145,10 @@ export default function CardEditor({
   };
 
   const handleSave = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      alert('Saving cards requires Supabase to be configured.');
+      return;
+    }
     if (!user) {
       alert('Please sign in to save your card');
       return;
