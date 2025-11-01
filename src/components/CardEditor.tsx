@@ -102,26 +102,10 @@ export default function CardEditor({
     const ctx = canvas.getContext('2d')!;
 
     try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Image load timeout'));
-        }, 10000);
-
-        img.onload = () => {
-          clearTimeout(timeout);
-          resolve();
-        };
-        img.onerror = () => {
-          clearTimeout(timeout);
-          reject(new Error('Failed to load background image'));
-        };
-        img.src = backgroundImageUrl;
-      });
-
-      ctx.drawImage(img, 0, 0, width, height);
+      const response = await fetch(backgroundImageUrl);
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      ctx.drawImage(bitmap, 0, 0, width, height);
     } catch (error) {
       console.warn('Could not load background image, using solid color:', error);
       ctx.fillStyle = '#f5f7fa';
@@ -132,6 +116,10 @@ export default function CardEditor({
       ctx.font = `${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
       ctx.fillStyle = el.color;
       ctx.textAlign = el.textAlign;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
 
       const lines = el.content.split('\n');
       lines.forEach((line, idx) => {
