@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isConfigured] = useState(() => isSupabaseConfigured);
 
   useEffect(() => {
     if (!supabase) {
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, isSupabaseConfigured, signUp, signIn, signOut }}
+      value={{ user, session, loading, isSupabaseConfigured: isConfigured, signUp, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>
