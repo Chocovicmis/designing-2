@@ -41,10 +41,10 @@ async function uploadImageToSupabase(imageUrl: string): Promise<string> {
 export async function generateBackground(prompt: string): Promise<string> {
   const response = await openai.images.generate({
     model: "dall-e-3",
-    prompt: `Create a beautiful invitation card background with the following theme: ${prompt}. The image should be elegant, suitable for an invitation card, and leave space for text overlay.`,
+    prompt: `Create a high-resolution, print-ready invitation card background with professional lighting, elegant composition, and a clear center area for text. The design theme will be: ${prompt} — keep it balanced, detailed, and suitable for printing with no text or watermark. Ensure the design includes sophisticated corners, professional color palette, and leaves ample white/clear space in the center for overlay text.`,
     n: 1,
     size: "1024x1024",
-    quality: "standard",
+    quality: "hd",
   });
 
   const dalleUrl = response.data?.[0]?.url || '';
