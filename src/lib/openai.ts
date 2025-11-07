@@ -92,15 +92,9 @@ export async function analyzeTextPlacement(
         role: "system",
         content: `You are an expert graphic designer specializing in invitation card layouts. Analyze the invitation text and suggest optimal text placement, sizing, and styling that will be clearly visible and aesthetically pleasing on the background.
 
-CRITICAL REQUIREMENTS:
-1. Ensure high contrast text colors (usually white or black with proper shadows/outlines if needed)
-2. Break text into logical sections (heading, body, details, etc.)
-3. Use appropriate font sizes - headings should be larger (40-60px), body text medium (20-30px), details smaller (16-20px)
-4. Position text to avoid likely busy areas based on background description
-5. Center important elements for visual balance
-6. Leave adequate margins (at least 50px from edges)
+CRITICAL: Return ONLY valid JSON, no markdown, no explanations. Start with { and end with }
 
-Return ONLY valid JSON in this exact format:
+Return in this exact JSON format:
 {
   "elements": [
     {
@@ -126,7 +120,7 @@ Background Theme: ${backgroundDescription}
 Invitation Text to Layout:
 ${invitationText}
 
-Provide optimal text layout with clear visibility and elegant design.`
+Return ONLY valid JSON with optimal text layout.`
       }
     ],
     temperature: 0.7,
@@ -135,9 +129,40 @@ Provide optimal text layout with clear visibility and elegant design.`
   const result = completion.choices[0].message.content || '{}';
 
   try {
-    return JSON.parse(result);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+    return JSON.parse(jsonMatch[0]);
   } catch (e) {
     console.error('Failed to parse GPT response:', result);
-    throw new Error('Failed to analyze text placement');
+
+    const lines = invitationText.split('\n').filter(line => line.trim());
+    const fallbackElements = lines.slice(0, 5).map((line, idx) => ({
+      content: line.trim(),
+      x: 50,
+      y: 100 + idx * 150,
+      width: width - 100,
+      fontSize: idx === 0 ? 48 : idx === 1 ? 36 : 24,
+      fontWeight: idx === 0 ? 'bold' : idx === 1 ? '600' : 'normal',
+      color: '#ffffff',
+      textAlign: 'center' as const,
+      fontFamily: 'serif'
+    }));
+
+    return {
+      elements: fallbackElements.length > 0 ? fallbackElements : [{
+        content: invitationText,
+        x: 50,
+        y: height / 2 - 50,
+        width: width - 100,
+        fontSize: 32,
+        fontWeight: 'normal',
+        color: '#ffffff',
+        textAlign: 'center',
+        fontFamily: 'serif'
+      }],
+      reasoning: 'Using fallback layout due to API parsing issue'
+    };
   }
 }
