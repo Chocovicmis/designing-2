@@ -41,7 +41,19 @@ async function uploadImageToSupabase(imageUrl: string): Promise<string> {
 export async function generateBackground(prompt: string): Promise<string> {
   const response = await openai.images.generate({
     model: "dall-e-3",
-    prompt: `Create a high-resolution, print-ready invitation card background with professional lighting, elegant composition, and a clear center area for text. The design theme will be: ${prompt} — keep it balanced, detailed, and suitable for printing with no text or watermark. Ensure the design includes sophisticated corners, professional color palette, and leaves ample white/clear space in the center for overlay text.`,
+    prompt: `Create a high-resolution, print-ready invitation card background. IMPORTANT: Design the background with decorative elements ONLY on the edges and corners, leaving 60-70% of the center area completely clear, blank, or very light for text overlay.
+
+Design theme: ${prompt}
+
+Requirements:
+- Center area (60-70%): Light background, minimal decoration, maximum readability for text
+- Edges/Corners (30-40%): Sophisticated decorative elements, floral patterns, borders, or design accents
+- Color palette: Professional, elegant, suitable for printing
+- No text, watermarks, or logos
+- Ensure high contrast between text areas and background
+- Suitable for both dark and light text overlay
+
+The key is to make 60-70% of the image space available for readable text placement while keeping decorative elements on the borders and corners.`,
     n: 1,
     size: "1024x1024",
     quality: "hd",
